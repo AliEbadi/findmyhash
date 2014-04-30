@@ -5,7 +5,12 @@ Hash cracker.
 
 You can find the original repository there : https://code.google.com/p/findmyhash/
 
+<<<<<<< HEAD
 ============= ORIGINAL README =============
+=======
+ORIGINAL README
+===========================================
+>>>>>>> 16f70298959c7679acca2077c39604bfd84aa11e
 
 # findmyhash.py
 
