@@ -265,47 +265,38 @@ def searchHash(hashvalue):
 Maybe Google has any idea...\nLooking for results...")
     sys.stdout.flush()
 
-    while not finished:
+    sys.stdout.write('.')
+    sys.stdout.flush()
 
-        sys.stdout.write('.')
-        sys.stdout.flush()
+    # Build the URL
+    url = "http://www.google.com/search?hl=en&q=%s&filter=0" % (hashvalue)
 
-        # Build the URL
-        url = "http://www.google.com/search?hl=en&q=%s&filter=0" % (hashvalue)
-        if start:
-            url += "&start=%d" % (start)
+    # Build the Headers with a random User-Agent
+    headers = {
+        "User-Agent": random.choice(USER_AGENTS)
+    }
 
-        # Build the Headers with a random User-Agent
-        headers = {
-            "User-Agent": USER_AGENTS[random.randint(0, len(USER_AGENTS)) - 1]
-        }
+    # Send the request
+    response = utils.do_HTTP_request(url, httpheaders=headers)
 
-        # Send the request
-        response = utils.do_HTTP_request(url, httpheaders=headers)
+    # Extract the results ...
+    html = None
+    if response:
+        html = response.read()
 
-        # Extract the results ...
-        html = None
-        if response:
-            html = response.read()
-        else:
-            continue
+        resultlist = re.findall(
+            utils.to_bytes(r'<h3.*?>.*?<a.*?href="(.*?)".*?>.*?</a>.*?</h3>'),
+            html,
+            re.DOTALL
+        )
 
-        resultlist = re.findall(r'<a href="[^"]*?" class=l', html)
+        results = []
 
         # ... saving only new ones
-        new = False
         for r in resultlist:
-            url_r = r.split('"')[1]
-
-            if not url_r in results:
-                results.append(url_r)
-                new = True
-
-        start += len(resultlist)
-
-        # If there is no a new result, finish
-        if not new:
-            finished = True
+            results.append(utils.to_string(r))
+    else:
+        results = []
 
     if results:
         print("\n\nGoogle has some results. Maybe you would like \

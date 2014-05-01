@@ -40,8 +40,6 @@ class MyAddr(model.Cracker):
         # Make the request
         response = utils.do_HTTP_request(url, params)
 
-        print(response)
-
         # Analyze the response
         html = None
         if response:
