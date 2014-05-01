@@ -44,10 +44,15 @@ class Noisette(model.Cracker):
         else:
             return None
 
-        match = re.search(utils.to_bytes(r'<p>String to hash : \
-<input name="text" value="[^"]+"/>'), html)
+        match = re.search(
+            utils.to_bytes(
+                r'<div.*?class="result".*?>.*?md5\("(.*?)"\).*</div>'
+            ),
+            html,
+            re.DOTALL
+        )
 
         if match:
-            return match.group().split('"')[3]
+            return utils.to_string(match.group(1))
         else:
             return None

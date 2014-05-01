@@ -4,6 +4,7 @@ import utils
 import re
 
 
+#Has a daily limit on searches...
 class NetMD5Crack(model.Cracker):
     NAME = "netmd5crack"
     URL = "http://www.netmd5crack.com"

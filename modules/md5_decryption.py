@@ -48,6 +48,6 @@ class MD5Decryption(model.Cracker):
         )
 
         if match:
-            return match.group().split('b>')[1][:-7]
+            return utils.to_string(match.group()).split('b>')[1][:-7]
         else:
             return None

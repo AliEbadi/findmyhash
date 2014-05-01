@@ -35,7 +35,7 @@ class StringFunction(model.Cracker):
 
         # Build the parameters
         params = {
-            "string": hashvalue,
+            "string_md5": hashvalue,
             "submit": "Decrypt",
             "result": ""
             }
@@ -52,13 +52,12 @@ class StringFunction(model.Cracker):
 
         match = re.search(
             utils.to_bytes(
-                r'<textarea class="textarea-input-tool-b" \
-rows="10" cols="50" name="result"[^>]*>[^<]+</textarea>'
+                r'<textarea.*?name="result".*?>(.*?)</textarea>'
             ),
             html
         )
 
         if match:
-            return match.group().split('>')[1][:-10]
+            return utils.to_string(match.group(1))
         else:
             return None

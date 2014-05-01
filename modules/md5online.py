@@ -47,13 +47,12 @@ class MD5Online(model.Cracker):
 
         match = re.search(
             utils.to_bytes(
-                r'<center><p>md5 :<b>\w*</b> \
-<br>pass : <b>[^<]*</b></p></table>'
+                r'<center>.*?<p>.*?md5 :.*?pass : <b>(.*?)</b>'
             ),
             html
         )
 
         if match:
-            return match.group().split('b>')[3][:-2]
+            return utils.to_string(match.group(1))
         else:
             return None

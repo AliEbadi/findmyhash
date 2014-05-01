@@ -48,6 +48,6 @@ class MD5Pass(model.Cracker):
         )
 
         if match:
-            return match.group().split('b>')[1][:-2]
+            return utils.to_string(match.group()).split('b>')[1][:-2]
         else:
             return None

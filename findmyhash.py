@@ -52,6 +52,11 @@ WHIRLPOOL = "whirlpool"
 LDAP_MD5 = "ldap_md5"
 LDAP_SHA1 = "ldap_sha1"
 
+if sys.version[0] == "3":
+    hashlib_algorithms = hashlib.algorithms_available
+else:
+    hashlib_algorithms = hashlib.algorithms
+
 
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 \
@@ -158,7 +163,7 @@ https://github.com/Talanor/findmyhash\n" % (str(info[0]), str(info[1])))
             if result:
 
                 # If it is a hashlib supported algorithm...
-                if algorithm in hashlib.algorithms:
+                if algorithm in hashlib_algorithms:
                     # Hash value is calculated to compare with cracker result
                     h = hashlib.new(algorithm)
                     h.update(utils.to_bytes(result))
