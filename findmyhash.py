@@ -4,7 +4,7 @@
 ### LICENSE
 ###############################################################################
 #
-# findmyhash.py - v 1.1.2
+# findmyhash.py - v 1.1.3
 #
 # This script is under GPL v3 License
 # (http://www.gnu.org/licenses/gpl-3.0.html).
@@ -20,15 +20,18 @@
 # Mail: bloglaxmarcaellugar AT gmail DOT com
 # twitter: @laXmarcaellugar
 #
+# Maintained by Talanor (https://github.com/Talanor/findmyhash)
+# Mail: adroneus AT gmail DOT com
+#
 
 try:
     import sys
     import hashlib
     import urllib2
-    import getopt
     import argparse
+    import random
+    from modules import Cracker
     from os import path
-    from urllib import urlencode
     from re import search, findall
     from random import seed, randint
     from base64 import decodestring
@@ -39,38 +42,15 @@ Execution error:
 
   You required some basic Python libraries.
 
-  This application use: sys, hashlib, urllib, urllib2, os, re, random, getopt, base64 and cookielib.
+  This application uses:
+    sys, hashlib, urllib, urllib2, os, re, random, base64 and cookielib.
 
   Please, check if you have all of them installed in your system.
 
 """
+    print(sys.exc_info())
     sys.exit(1)
 
-try:
-    from httplib2 import Http
-except:
-    print """
-Execution error:
-
-  The Python library httplib2 is not installed in your system.
-  Please, install it before use this application.
-
-"""
-    sys.exit(1)
-
-try:
-    from libxml2 import parseDoc
-except:
-    print """
-Execution error:
-
-  The Python library libxml2 is not installed in your system.
-
-  Because of that, some plugins aren't going to work correctly.
-
-  Please, install it before use this application.
-
-"""
 
 MD4 = "md4"
 MD5 = "md5"
@@ -119,547 +99,6 @@ USER_AGENTS = [
 ]
 
 
-class NETMD5CRACK:
-    name = "netmd5crack"
-    url = "http://www.netmd5crack.com"
-    supported_algorithm = [MD5]
-
-    def isSupported(self, alg):
-        """Return True if HASHCRACK can crack this type of algorithm and
-        False if it cannot."""
-
-        if alg in self.supported_algorithm:
-            return True
-        else:
-            return False
-
-    def crack(self, hashvalue, alg):
-        """Try to crack the hash.
-        @param hashvalue Hash to crack.
-        @param alg Algorithm to crack."""
-
-        # Check if the cracker can crack this kind of algorithm
-        if not self.isSupported(alg):
-            return None
-
-        # Build the URL
-        url = "http://www.netmd5crack.com/cgi-bin/Crack.py?InputHash=%s" % (hashvalue)
-
-        # Make the request
-        response = do_HTTP_request(url)
-
-        # Analyze the response
-        html = None
-        if response:
-            html = response.read()
-        else:
-            return None
-
-        regexp = r'<tr><td class="border">%s</td><td class="border">[^<]*</td></tr></table>' % (hashvalue)
-        match = search(regexp, html)
-
-        if match:
-            match2 = search("Sorry, we don't have that hash in our database", match.group())
-            if match2:
-                return None
-            else:
-                return match.group().split('border')[2].split('<')[0][2:]
-
-
-class MY_ADDR:
-    name = "my-addr"
-    url = "http://md5.my-addr.com"
-    supported_algorithm = [MD5]
-
-    def isSupported(self, alg):
-        """Return True if HASHCRACK can crack this type of algorithm and
-        False if it cannot."""
-
-        if alg in self.supported_algorithm:
-            return True
-        else:
-            return False
-
-    def crack(self, hashvalue, alg):
-        """Try to crack the hash.
-        @param hashvalue Hash to crack.
-        @param alg Algorithm to crack."""
-
-        # Check if the cracker can crack this kind of algorithm
-        if not self.isSupported(alg):
-            return None
-
-        # Build the URL
-        url = "http://md5.my-addr.com/md5_decrypt-md5_cracker_online/md5_decoder_tool.php"
-
-        # Build the parameters
-        params = {
-            "md5": hashvalue,
-            "x": 21,
-            "y": 8
-        }
-
-        # Make the request
-        response = do_HTTP_request(url, params)
-
-        # Analyze the response
-        html = None
-        if response:
-            html = response.read()
-        else:
-            return None
-
-        match = search(r"<span class='middle_title'>Hashed string</span>: [^<]*</div>", html)
-
-        if match:
-            return match.group().split('span')[2][3:-6]
-        else:
-            return None
-
-
-class MD5PASS:
-    name = "md5pass"
-    url = "http://md5pass.info"
-    supported_algorithm = [MD5]
-
-    def isSupported(self, alg):
-        """Return True if HASHCRACK can crack this type of algorithm and
-        False if it cannot."""
-
-        if alg in self.supported_algorithm:
-            return True
-        else:
-            return False
-
-    def crack(self, hashvalue, alg):
-        """Try to crack the hash.
-        @param hashvalue Hash to crack.
-        @param alg Algorithm to crack."""
-
-        # Check if the cracker can crack this kind of algorithm
-        if not self.isSupported(alg):
-            return None
-
-        # Build the URL
-        url = self.url
-
-        # Build the parameters
-        params = {
-            "hash": hashvalue,
-            "get_pass": "Get Pass"
-        }
-
-        # Make the request
-        response = do_HTTP_request(url, params)
-
-        # Analyze the response
-        html = None
-        if response:
-            html = response.read()
-        else:
-            return None
-
-        match = search(r"Password - <b>[^<]*</b>", html)
-
-        if match:
-            return match.group().split('b>')[1][:-2]
-        else:
-            return None
-
-
-class MD5DECRYPTION:
-    name = "md5decryption"
-    url = "http://md5decryption.com"
-    supported_algorithm = [MD5]
-
-    def isSupported(self, alg):
-        """Return True if HASHCRACK can crack this type of algorithm and
-        False if it cannot."""
-
-        if alg in self.supported_algorithm:
-            return True
-        else:
-            return False
-
-    def crack(self, hashvalue, alg):
-        """Try to crack the hash.
-        @param hashvalue Hash to crack.
-        @param alg Algorithm to crack."""
-
-        # Check if the cracker can crack this kind of algorithm
-        if not self.isSupported(alg):
-            return None
-
-        # Build the URL
-        url = self.url
-
-        # Build the parameters
-        params = {
-            "hash": hashvalue,
-            "submit": "Decrypt It!"
-        }
-
-        # Make the request
-        response = do_HTTP_request(url, params)
-
-        # Analyze the response
-        html = None
-        if response:
-            html = response.read()
-        else:
-            return None
-
-        match = search(r"Decrypted Text: </b>[^<]*</font>", html)
-
-        if match:
-            return match.group().split('b>')[1][:-7]
-        else:
-            return None
-
-
-class MD5ONLINE:
-    name = "md5online"
-    url = "http://md5online.net"
-    supported_algorithm = [MD5]
-
-    def isSupported(self, alg):
-        """Return True if HASHCRACK can crack this type of algorithm and
-        False if it cannot."""
-
-        if alg in self.supported_algorithm:
-            return True
-        else:
-            return False
-
-    def crack(self, hashvalue, alg):
-        """Try to crack the hash.
-        @param hashvalue Hash to crack.
-        @param alg Algorithm to crack."""
-
-        # Check if the cracker can crack this kind of algorithm
-        if not self.isSupported(alg):
-            return None
-
-        # Build the URL
-        url = self.url
-
-        # Build the parameters
-        params = {
-            "pass": hashvalue,
-            "option": "hash2text",
-            "send": "Submit"
-        }
-
-        # Make the request
-        response = do_HTTP_request(url, params)
-
-        # Analyze the response
-        html = None
-        if response:
-            html = response.read()
-        else:
-            return None
-
-        match = search(r'<center><p>md5 :<b>\w*</b> <br>pass : <b>[^<]*</b></p></table>', html)
-
-        if match:
-            return match.group().split('b>')[3][:-2]
-        else:
-            return None
-
-
-class PASSWORD_DECRYPT:
-    name = "password-decrypt"
-    url = "http://password-decrypt.com"
-    supported_algorithm = [CISCO7, JUNIPER]
-
-    def isSupported(self, alg):
-        """Return True if HASHCRACK can crack this type of algorithm and
-        False if it cannot."""
-
-        if alg in self.supported_algorithm:
-            return True
-        else:
-            return False
-
-    def crack(self, hashvalue, alg):
-        """Try to crack the hash.
-        @param hashvalue Hash to crack.
-        @param alg Algorithm to crack."""
-
-        # Check if the cracker can crack this kind of algorithm
-        if not self.isSupported(alg):
-            return None
-
-        # Build the URL and the parameters
-        url = ""
-        params = None
-        if alg == CISCO7:
-            url = "http://password-decrypt.com/cisco.cgi"
-            params = {
-                "submit": "Submit",
-                "cisco_password": hashvalue,
-                "submit": "Submit"
-            }
-        else:
-            url = "http://password-decrypt.com/juniper.cgi"
-            params = {
-                "submit": "Submit",
-                "juniper_password": hashvalue,
-                "submit": "Submit"
-            }
-
-        response = do_HTTP_request(url, params)
-
-        html = None
-        if response:
-            html = response.read()
-        else:
-            return None
-
-        match = search(r'Decrypted Password:&nbsp;<B>[^<]*</B> </p>', html)
-
-        if match:
-            return match.group().split('B>')[1][:-2]
-        else:
-            return None
-
-
-class MD5_NET:
-    name = "md5.net"
-    url = "http://md5.net"
-    supported_algorithm = [MD5]
-
-    def isSupported(self, alg):
-        """Return True if HASHCRACK can crack this type of algorithm and
-        False if it cannot."""
-
-        if alg in self.supported_algorithm:
-            return True
-        else:
-            return False
-
-    def crack(self, hashvalue, alg):
-        """Try to crack the hash.
-        @param hashvalue Hash to crack.
-        @param alg Algorithm to crack."""
-
-        # Check if the cracker can crack this kind of algorithm
-        if not self.isSupported(alg):
-            return None
-
-        # Build the URL
-        url = "http://www.md5.net/cracker.php"
-
-        # Build the parameters
-        params = {
-            "hash": hashvalue
-        }
-
-        # Make the request
-        response = do_HTTP_request(url, params)
-
-        # Analyze the response
-        html = None
-        if response:
-            html = response.read()
-        else:
-            return None
-
-        match = search(r'<input type="text" id="hash" size="32" value="[^"]*"/>', html)
-
-        if match:
-            return match.group().split('"')[7]
-        else:
-            return None
-
-
-class NOISETTE:
-    name = "noisette.ch"
-    url = "http://md5.noisette.ch"
-    supported_algorithm = [MD5]
-
-    def isSupported(self, alg):
-        """Return True if HASHCRACK can crack this type of algorithm and
-        False if it cannot."""
-
-        if alg in self.supported_algorithm:
-            return True
-        else:
-            return False
-
-    def crack(self, hashvalue, alg):
-        """Try to crack the hash.
-        @param hashvalue Hash to crack.
-        @param alg Algorithm to crack."""
-
-        # Check if the cracker can crack this kind of algorithm
-        if not self.isSupported(alg):
-            return None
-
-        # Build the URL
-        url = "http://md5.noisette.ch/index.php"
-
-        # Build the parameters
-        params = {
-            "hash": hashvalue
-        }
-
-        # Make the request
-        response = do_HTTP_request(url, params)
-
-        # Analyze the response
-        html = None
-        if response:
-            html = response.read()
-        else:
-            return None
-
-        match = search(r'<p>String to hash : <input name="text" value="[^"]+"/>', html)
-
-        if match:
-            return match.group().split('"')[3]
-        else:
-            return None
-
-
-class STRINGFUNCTION:
-    name = "stringfunction"
-    url = "http://www.stringfunction.com"
-    supported_algorithm = [MD5, SHA1]
-
-    def isSupported(self, alg):
-        """Return True if HASHCRACK can crack this type of algorithm and
-        False if it cannot."""
-
-        if alg in self.supported_algorithm:
-            return True
-        else:
-            return False
-
-    def crack(self, hashvalue, alg):
-        """Try to crack the hash.
-        @param hashvalue Hash to crack.
-        @param alg Algorithm to crack."""
-
-        # Check if the cracker can crack this kind of algorithm
-        if not self.isSupported(alg):
-            return None
-
-        # Build the URL
-        url = ""
-        if alg == MD5:
-            url = "http://www.stringfunction.com/md5-decrypter.html"
-        else:
-            url = "http://www.stringfunction.com/sha1-decrypter.html"
-
-        # Build the parameters
-        params = {
-            "string": hashvalue,
-            "submit": "Decrypt",
-            "result": ""
-            }
-
-        # Make the request
-        response = do_HTTP_request(url, params)
-
-        # Analyze the response
-        html = None
-        if response:
-            html = response.read()
-        else:
-            return None
-
-        match = search(r'<textarea class="textarea-input-tool-b" rows="10" cols="50" name="result"[^>]*>[^<]+</textarea>', html)
-
-        if match:
-            return match.group().split('>')[1][:-10]
-        else:
-            return None
-
-
-class GOOG_LI:
-    name = "goog.li"
-    url = "http://goog.li"
-    supported_algorithm = [
-        MD5,
-        MYSQL,
-        SHA1,
-        SHA224,
-        SHA384,
-        SHA256,
-        SHA512,
-        RIPEMD,
-        NTLM,
-        GOST,
-        WHIRLPOOL,
-        LDAP_MD5,
-        LDAP_SHA1
-    ]
-
-    def isSupported(self, alg):
-        """Return True if HASHCRACK can crack this type of algorithm and
-        False if it cannot."""
-
-        if alg in self.supported_algorithm:
-            return True
-        else:
-            return False
-
-    def crack(self, hashvalue, alg):
-        """Try to crack the hash.
-        @param hashvalue Hash to crack.
-        @param alg Algorithm to crack."""
-
-        # Check if the cracker can crack this kind of algorithm
-        if not self.isSupported(alg):
-            return None
-
-        hash2 = None
-        if alg in [NTLM] and ':' in hashvalue:
-            hash2 = hashvalue.split(':')[1]
-        else:
-            hash2 = hashvalue
-
-        # Confirm the initial '*' character
-        if alg == MYSQL and hash2[0] != '*':
-            hash2 = '*' + hash2
-
-        # Build the URL
-        url = "http://goog.li/?q=%s" % (hash2)
-
-        # Make the request
-        response = do_HTTP_request(url)
-
-        # Analyze the response
-        html = None
-        if response:
-            html = response.read()
-        else:
-            return None
-
-        match = search(r'<br />cleartext[^:]*: [^<]*<br />', html)
-
-        if match:
-            return match.group().split(':')[1].strip()[:-6]
-        else:
-            return None
-
-
-CRAKERS = [
-    NETMD5CRACK,
-    MY_ADDR,
-    MD5PASS,
-    MD5DECRYPTION,
-    MD5ONLINE,
-    PASSWORD_DECRYPT,
-    MD5_NET,
-    NOISETTE,
-    STRINGFUNCTION,
-    GOOG_LI,
-]
-
-
 def configureCookieProcessor(cookiefile='/tmp/searchmyhash.cookie'):
     '''Set a Cookie Handler to accept cookies from the different Web sites.
 
@@ -676,31 +115,6 @@ def configureCookieProcessor(cookiefile='/tmp/searchmyhash.cookie'):
         urllib2.install_opener(opener)
 
 
-def do_HTTP_request(url, params={}, httpheaders={}):
-    '''
-    Send a GET or POST HTTP Request.
-    @return: HTTP Response
-    '''
-
-    data = {}
-    request = None
-
-    # If there is parameters, they are been encoded
-    if params:
-        data = urlencode(params)
-
-        request = urllib2.Request(url, data, headers=httpheaders)
-    else:
-        request = urllib2.Request(url, headers=httpheaders)
-
-    # Send the request
-    try:
-        response = urllib2.urlopen(request)
-    except:
-        return ""
-
-    return response
-
 def crackHash(algorithm, hashvalue=None, hashfile=None):
     """Crack a hash or all the hashes of a file.
 
@@ -708,8 +122,6 @@ def crackHash(algorithm, hashvalue=None, hashfile=None):
     @param hashvalue Hash value to be cracked.
     @param hashfile Path of the hash file.
     @return If the hash has been cracked or not."""
-
-    global CRAKERS
 
     # Cracked hashes will be stored here
     crackedhashes = []
@@ -742,18 +154,16 @@ def crackHash(algorithm, hashvalue=None, hashfile=None):
 
         print "\nCracking hash: %s\n" % (activehash)
 
-        begin = randint(0, len(CRAKERS)-1)
+        cracker_list = Cracker.__subclasses__()
+        random.shuffle(cracker_list)
 
-        for i in range(len(CRAKERS)):
+        for cr in cracker_list:
 
-            # Select the cracker
-            cr = CRAKERS[(i + begin) % len(CRAKERS)]()
-
-            if not cr.isSupported(algorithm):
+            if not cr.algo_supported(algorithm):
                 continue
 
             # Analyze the hash
-            print "Analyzing with %s (%s)..." % (cr.name, cr.url)
+            print "Analyzing with %s (%s)..." % (cr.NAME, cr.URL)
 
             # Crack the hash
             result = None
@@ -761,8 +171,10 @@ def crackHash(algorithm, hashvalue=None, hashfile=None):
                 result = cr.crack(activehash, algorithm)
             # If it was some trouble, exit
             except:
+                info = sys.exc_info()
                 print "\nSomething was wrong. Please, contact us \
-                to report the bug:\n\nhttps://github.com/Talanor/findmyhash\n"
+to report the bug:\n%s %s\n\n\
+https://github.com/Talanor/findmyhash\n" % (str(info[0]), str(info[1]))
                 if hashfile:
                     try:
                         hashestocrack.close()
@@ -806,12 +218,20 @@ def crackHash(algorithm, hashvalue=None, hashfile=None):
                         hashresults.append(result)
                         cracked = 2
 
-                elif algorithm == NTLM or (algorithm == LM and ':' in activehash):
-                    # NTLM Hash value is calculated to compare with cracker result
-                    candidate = hashlib.new('md4', result.split()[-1].encode('utf-16le')).hexdigest()
+                elif algorithm == NTLM or \
+                        (algorithm == LM and ':' in activehash):
+                    # NTLM Hash value is calculated to compare
+                    # with cracker result
+                    candidate = hashlib.new(
+                        'md4',
+                        result.split()[-1].encode('utf-16le')
+                    ).hexdigest()
 
                     # It's a LM:NTLM combination or a single NTLM hash
-                    if (':' in activehash and candidate == activehash.split(':')[1]) or (':' not in activehash and candidate == activehash):
+                    if (':' in activehash and
+                        candidate == activehash.split(':')[1]) \
+                            or (':' not in activehash
+                                and candidate == activehash):
                         hashresults.append(result)
                         cracked = 2
 
@@ -822,12 +242,13 @@ def crackHash(algorithm, hashvalue=None, hashfile=None):
 
             # Had the hash cracked?
             if cracked:
-                print "\n***** HASH CRACKED!! *****\nThe original string is: %s\n" % (result)
+                print "\n***** HASH CRACKED!! *****\n\
+The original string is: %s\n" % (result)
                 # If result was verified, break
                 if cracked == 2:
                     break
             else:
-                print "... hash not found in %s\n" % (cr.name)
+                print "... hash not found in %s\n" % (cr.NAME)
 
         if hashresults:
             resultlist = []
@@ -881,7 +302,7 @@ def searchHash(hashvalue):
             url += "&start=%d" % (start)
 
         # Build the Headers with a random User-Agent
-        headers = {"User-Agent": USER_AGENTS[randint(0, len(USER_AGENTS))-1]}
+        headers = {"User-Agent": USER_AGENTS[randint(0, len(USER_AGENTS)) - 1]}
 
         # Send the request
         response = do_HTTP_request(url, httpheaders=headers)
@@ -911,7 +332,8 @@ def searchHash(hashvalue):
             finished = True
 
     if results:
-        print "\n\nGoogle has some results. Maybe you would like to check them manually:\n"
+        print "\n\nGoogle has some results. Maybe you would like \
+to check them manually:\n"
 
         results.sort()
         for r in results:
