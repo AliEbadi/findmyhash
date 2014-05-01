@@ -2,7 +2,6 @@ from algos import *
 import model
 import utils
 import re
-import urlparse
 
 
 class StringFunction(model.Cracker):
@@ -30,9 +29,9 @@ class StringFunction(model.Cracker):
         # Build the URL
         url = ""
         if alg == MD5:
-            url = urlparse.urljoin(cls.URL, "/md5-decrypter.html")
+            url = utils.join_url(cls.URL, "/md5-decrypter.html")
         else:
-            url = urlparse.urljoin(cls.URL, "/sha1-decrypter.html")
+            url = utils.join_url(cls.URL, "/sha1-decrypter.html")
 
         # Build the parameters
         params = {
@@ -51,8 +50,13 @@ class StringFunction(model.Cracker):
         else:
             return None
 
-        match = re.search(r'<textarea class="textarea-input-tool-b" \
-rows="10" cols="50" name="result"[^>]*>[^<]+</textarea>', html)
+        match = re.search(
+            utils.to_bytes(
+                r'<textarea class="textarea-input-tool-b" \
+rows="10" cols="50" name="result"[^>]*>[^<]+</textarea>'
+            ),
+            html
+        )
 
         if match:
             return match.group().split('>')[1][:-10]

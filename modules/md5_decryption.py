@@ -42,7 +42,10 @@ class MD5Decryption(model.Cracker):
         else:
             return None
 
-        match = re.search(r"Decrypted Text: </b>[^<]*</font>", html)
+        match = re.search(
+            utils.to_bytes(r"Decrypted Text: </b>[^<]*</font>"),
+            html
+        )
 
         if match:
             return match.group().split('b>')[1][:-7]

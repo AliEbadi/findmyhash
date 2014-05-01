@@ -2,7 +2,6 @@ from algos import *
 import model
 import utils
 import re
-import urlparse
 
 
 class PasswordDecrypt(model.Cracker):
@@ -31,7 +30,7 @@ class PasswordDecrypt(model.Cracker):
         url = ""
         params = None
         if alg == CISCO7:
-            url = urlparse.urljoin(cls.URL, "/cisco.cgi")
+            url = utils.join_url(cls.URL, "/cisco.cgi")
             params = {
                 "submit": "Submit",
                 "cisco_password": hashvalue,

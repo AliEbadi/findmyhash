@@ -2,7 +2,6 @@ from algos import *
 import model
 import utils
 import re
-import urlparse
 
 
 class MyAddr(model.Cracker):
@@ -28,7 +27,7 @@ class MyAddr(model.Cracker):
             return None
 
         # Build the URL
-        url = urlparse.urljoin(cls.URL, "/md5_decrypt-md5_cracker_online\
+        url = utils.join_url(cls.URL, "/md5_decrypt-md5_cracker_online\
 /md5_decoder_tool.php")
 
         # Build the parameters
@@ -41,6 +40,8 @@ class MyAddr(model.Cracker):
         # Make the request
         response = utils.do_HTTP_request(url, params)
 
+        print(response)
+
         # Analyze the response
         html = None
         if response:
@@ -48,10 +49,15 @@ class MyAddr(model.Cracker):
         else:
             return None
 
-        match = re.search("<span class='middle_title'>Hashed string</span>: \
-[^<]*</div>", html)
+        match = re.search(
+            utils.to_bytes("<span class='middle_title'>Hashed string</span>: \
+[^<]*</div>"),
+            html
+        )
 
         if match:
-            return match.group().split('span')[2][3:-6]
+            return utils.to_string(
+                match.group()
+            ).split('span')[2][3:-6]
         else:
             return None

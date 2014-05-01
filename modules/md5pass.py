@@ -42,7 +42,10 @@ class MD5Pass(model.Cracker):
         else:
             return None
 
-        match = re.search(r"Password - <b>[^<]*</b>", html)
+        match = re.search(
+            utils.to_bytes(r"Password - <b>[^<]*</b>"),
+            html
+        )
 
         if match:
             return match.group().split('b>')[1][:-2]

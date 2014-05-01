@@ -2,7 +2,6 @@ from algos import *
 import model
 import utils
 import re
-import urlparse
 
 
 class Noisette(model.Cracker):
@@ -28,7 +27,7 @@ class Noisette(model.Cracker):
             return None
 
         # Build the URL
-        url = urlparse.urljoin(cls.URL, "/index.php")
+        url = utils.join_url(cls.URL, "/index.php")
 
         # Build the parameters
         params = {
@@ -45,8 +44,8 @@ class Noisette(model.Cracker):
         else:
             return None
 
-        match = re.search(r'<p>String to hash : \
-<input name="text" value="[^"]+"/>', html)
+        match = re.search(utils.to_bytes(r'<p>String to hash : \
+<input name="text" value="[^"]+"/>'), html)
 
         if match:
             return match.group().split('"')[3]

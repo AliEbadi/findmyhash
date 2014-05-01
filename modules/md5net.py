@@ -2,7 +2,6 @@ from algos import *
 import model
 import utils
 import re
-import urlparse
 
 
 class Md5Net(model.Cracker):
@@ -28,7 +27,7 @@ class Md5Net(model.Cracker):
             return None
 
         # Build the URL
-        url = urlparse.urljoin(cls.URL, "/cracker.php")
+        url = utils.join_url(cls.URL, "/cracker.php")
 
         # Build the parameters
         params = {
@@ -45,8 +44,11 @@ class Md5Net(model.Cracker):
         else:
             return None
 
-        match = re.search(r'<input type="text" id="hash" \
-size="32" value="[^"]*"/>', html)
+        match = re.search(
+            utils.to_bytes(r'<input type="text" id="hash" \
+size="32" value="[^"]*"/>'),
+            html
+        )
 
         if match:
             return match.group().split('"')[7]

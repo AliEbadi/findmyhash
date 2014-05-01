@@ -2,7 +2,6 @@ from algos import *
 import model
 import utils
 import re
-import urlparse
 
 
 #Useless for now, mut recaliber leakdb
@@ -54,7 +53,7 @@ class GooglLi():
             hash2 = '*' + hash2
 
         # Build the URL
-        url = urlparse.urljoin(cls.URL, "/?q=%s" % (hash2))
+        url = utils.join_url(cls.URL, "/?q=%s" % (hash2))
 
         # Make the request
         response = utils.do_HTTP_request(url)

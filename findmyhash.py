@@ -24,32 +24,14 @@
 # Mail: adroneus AT gmail DOT com
 #
 
-try:
-    import sys
-    import hashlib
-    import urllib2
-    import argparse
-    import random
-    from modules import Cracker
-    from os import path
-    from re import search, findall
-    from random import seed, randint
-    from base64 import decodestring
-    from cookielib import LWPCookieJar
-except:
-    print """
-Execution error:
-
-  You required some basic Python libraries.
-
-  This application uses:
-    sys, hashlib, urllib, urllib2, os, re, random, base64 and cookielib.
-
-  Please, check if you have all of them installed in your system.
-
-"""
-    print(sys.exc_info())
-    sys.exit(1)
+import sys
+import hashlib
+import random
+import argparse
+import re
+import base64
+import traceback
+from modules import *
 
 
 MD4 = "md4"
@@ -99,22 +81,6 @@ USER_AGENTS = [
 ]
 
 
-def configureCookieProcessor(cookiefile='/tmp/searchmyhash.cookie'):
-    '''Set a Cookie Handler to accept cookies from the different Web sites.
-
-    @param cookiefile Path of the cookie store.'''
-
-    cookieHandler = LWPCookieJar()
-    if cookieHandler is not None:
-        if path.isfile(cookiefile):
-            cookieHandler.load(cookiefile)
-
-        opener = urllib2.build_opener(
-            urllib2.HTTPCookieProcessor(cookieHandler)
-        )
-        urllib2.install_opener(opener)
-
-
 def crackHash(algorithm, hashvalue=None, hashfile=None):
     """Crack a hash or all the hashes of a file.
 
@@ -141,7 +107,7 @@ def crackHash(algorithm, hashvalue=None, hashfile=None):
         try:
             hashestocrack = open(hashfile, "r")
         except:
-            print "\nIt is not possible to read input file (%s)\n" % (hashfile)
+            print("\nError reading input file (%s)\n" % (hashfile))
             return cracked
 
     for activehash in hashestocrack:
@@ -152,7 +118,7 @@ def crackHash(algorithm, hashvalue=None, hashfile=None):
         if algorithm not in [JUNIPER, LDAP_MD5, LDAP_SHA1]:
             activehash = activehash.lower()
 
-        print "\nCracking hash: %s\n" % (activehash)
+        print("\nCracking hash: %s\n" % (activehash))
 
         cracker_list = Cracker.__subclasses__()
         random.shuffle(cracker_list)
@@ -163,7 +129,7 @@ def crackHash(algorithm, hashvalue=None, hashfile=None):
                 continue
 
             # Analyze the hash
-            print "Analyzing with %s (%s)..." % (cr.NAME, cr.URL)
+            print("Analyzing with %s (%s)..." % (cr.NAME, cr.URL))
 
             # Crack the hash
             result = None
@@ -172,9 +138,10 @@ def crackHash(algorithm, hashvalue=None, hashfile=None):
             # If it was some trouble, exit
             except:
                 info = sys.exc_info()
-                print "\nSomething was wrong. Please, contact us \
+                print("\nSomething was wrong. Please, contact us \
 to report the bug:\n%s %s\n\n\
-https://github.com/Talanor/findmyhash\n" % (str(info[0]), str(info[1]))
+https://github.com/Talanor/findmyhash\n" % (str(info[0]), str(info[1])))
+                traceback.print_exc()
                 if hashfile:
                     try:
                         hashestocrack.close()
@@ -199,7 +166,8 @@ https://github.com/Talanor/findmyhash\n" % (str(info[0]), str(info[1]))
                         ]:
                     # Hash value is calculated to compare with cracker result
                     h = hashlib.new(algorithm)
-                    h.update(result)
+                    print(type(result), result)
+                    h.update(utils.to_bytes(result))
 
                     if h.hexdigest() == activehash:
                         hashresults.append(result)
@@ -208,7 +176,7 @@ https://github.com/Talanor/findmyhash\n" % (str(info[0]), str(info[1]))
                 # If it is a half-supported hashlib algorithm
                 elif algorithm in [LDAP_MD5, LDAP_SHA1]:
                     alg = algorithm.split('_')[1]
-                    ahash = decodestring(activehash.split('}')[1])
+                    ahash = base64.decodestring(activehash.split('}')[1])
 
                     # Hash value is calculated to compare with cracker result
                     h = hashlib.new(alg)
@@ -242,13 +210,13 @@ https://github.com/Talanor/findmyhash\n" % (str(info[0]), str(info[1]))
 
             # Had the hash cracked?
             if cracked:
-                print "\n***** HASH CRACKED!! *****\n\
-The original string is: %s\n" % (result)
+                print("\n***** HASH CRACKED!! *****\n\
+The original string is: %s\n" % (result))
                 # If result was verified, break
                 if cracked == 2:
                     break
             else:
-                print "... hash not found in %s\n" % (cr.NAME)
+                print("... hash not found in %s\n" % (cr.NAME))
 
         if hashresults:
             resultlist = []
@@ -272,15 +240,20 @@ The original string is: %s\n" % (result)
             pass
 
     # Show a resume of all the cracked hashes
-    print "\nThe following hashes were cracked:\n----------------------------------\n"
-    print crackedhashes and "\n".join("%s -> %s" % (hashvalue, result.strip()) for hashvalue, result in crackedhashes) or "NO HASH WAS CRACKED."
-    print
+    print("\nThe following hashes were cracked:\n\
+----------------------------------\n")
+    print(crackedhashes and "\n".join(
+        "%s -> %s" % (hashvalue, result.strip())
+        for hashvalue, result in crackedhashes
+    ) or "NO HASH WAS CRACKED.")
+    print("")
 
-    return cracked
+    return (cracked)
 
 
 def searchHash(hashvalue):
-    '''Google the hash value looking for any result which could give some clue...
+    '''Google the hash value looking for any result which
+    could give some clue...
 
     @param hashvalue The hash is been looking for.'''
 
@@ -288,7 +261,8 @@ def searchHash(hashvalue):
     finished = False
     results = []
 
-    sys.stdout.write("\nThe hash wasn't found in any database. Maybe Google has any idea...\nLooking for results...")
+    sys.stdout.write("\nThe hash wasn't found in any database. \
+Maybe Google has any idea...\nLooking for results...")
     sys.stdout.flush()
 
     while not finished:
@@ -302,10 +276,12 @@ def searchHash(hashvalue):
             url += "&start=%d" % (start)
 
         # Build the Headers with a random User-Agent
-        headers = {"User-Agent": USER_AGENTS[randint(0, len(USER_AGENTS)) - 1]}
+        headers = {
+            "User-Agent": USER_AGENTS[random.randint(0, len(USER_AGENTS)) - 1]
+        }
 
         # Send the request
-        response = do_HTTP_request(url, httpheaders=headers)
+        response = utils.do_HTTP_request(url, httpheaders=headers)
 
         # Extract the results ...
         html = None
@@ -314,7 +290,7 @@ def searchHash(hashvalue):
         else:
             continue
 
-        resultlist = findall(r'<a href="[^"]*?" class=l', html)
+        resultlist = re.findall(r'<a href="[^"]*?" class=l', html)
 
         # ... saving only new ones
         new = False
@@ -332,16 +308,16 @@ def searchHash(hashvalue):
             finished = True
 
     if results:
-        print "\n\nGoogle has some results. Maybe you would like \
-to check them manually:\n"
+        print("\n\nGoogle has some results. Maybe you would like \
+to check them manually:\n")
 
         results.sort()
         for r in results:
-            print "  *> %s" % (r)
+            print("  *> %s" % (r))
         print
 
     else:
-        print "\n\nGoogle doesn't have any result. Sorry!\n"
+        print("\n\nGoogle doesn't have any result. Sorry!\n")
 
 
 def main(args):
@@ -444,9 +420,7 @@ Contact:
     hashfile = None if ns["file"] is None else ns["file"][0]
     googlesearch = ns["google"]
 
-    configureCookieProcessor()
-
-    seed()
+    random.seed()
 
     cracked = 0
 

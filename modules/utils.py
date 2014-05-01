@@ -1,5 +1,30 @@
-import urllib
-import urllib2
+import sys
+import utils
+
+if sys.version[0] == "3":
+    from urllib.parse import urlencode
+    from urllib.request import Request
+    from urllib.request import urlopen
+    from urllib.parse import urljoin
+else:
+    from urllib import urlencode
+    from urllib2 import Request
+    from urllib2 import urlopen
+    from urlparse import urljoin
+
+
+def to_bytes(s):
+    if sys.version[0] == "3":
+        return bytes(s, "utf-8")
+    else:
+        return s
+
+
+def to_string(s):
+    if sys.version[0] == "3":
+        return s.decode("utf-8")
+    else:
+        return s
 
 
 def do_HTTP_request(url, params={}, httpheaders={}):
@@ -13,16 +38,20 @@ def do_HTTP_request(url, params={}, httpheaders={}):
 
     # If there is parameters, they are been encoded
     if params:
-        data = urllib.urlencode(params)
+        data = utils.to_bytes(urlencode(params))
 
-        request = urllib2.Request(url, data, headers=httpheaders)
+        request = Request(url, data, headers=httpheaders)
     else:
-        request = urllib2.Request(url, headers=httpheaders)
+        request = Request(url, headers=httpheaders)
 
     # Send the request
     try:
-        response = urllib2.urlopen(request, timeout=2)
+        response = urlopen(request, timeout=2)
     except:
         return ""
 
     return response
+
+
+def join_url(p1, p2):
+    return urljoin(p1, p2)

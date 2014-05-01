@@ -2,7 +2,6 @@ from algos import *
 import model
 import utils
 import re
-import urlparse
 
 
 class NetMD5Crack(model.Cracker):
@@ -28,7 +27,7 @@ class NetMD5Crack(model.Cracker):
             return None
 
         # Build the URL
-        url = urlparse.urljoin(
+        url = utils.join_url(
             cls.URL,
             "/cgi-bin/Crack.py?InputHash=%s" % (hashvalue)
         )
@@ -45,7 +44,7 @@ class NetMD5Crack(model.Cracker):
 
         regexp = r'<tr><td class="border">%s</td>\
 <td class="border">[^<]*</td></tr></table>' % (hashvalue)
-        match = re.search(regexp, html)
+        match = re.search(utils.to_bytes(regexp), html)
 
         if match:
             match2 = re.search("Sorry, we don't have \
