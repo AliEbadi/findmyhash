@@ -26,6 +26,7 @@ try:
     import hashlib
     import urllib2
     import getopt
+    import argparse
     from os import path
     from urllib import urlencode
     from re import search, findall
@@ -700,81 +701,6 @@ def do_HTTP_request(url, params={}, httpheaders={}):
 
     return response
 
-
-def printSyntax():
-    """Print application syntax."""
-
-    print """%s 1.1.2 ( http://code.google.com/p/findmyhash/ )
-
-Usage:
-------
-
-  python %s <algorithm> OPTIONS
-
-
-Accepted algorithms are:
-------------------------
-
-  MD4       - RFC 1320
-  MD5       - RFC 1321
-  SHA1      - RFC 3174 (FIPS 180-3)
-  SHA224    - RFC 3874 (FIPS 180-3)
-  SHA256    - FIPS 180-3
-  SHA384    - FIPS 180-3
-  SHA512    - FIPS 180-3
-  RMD160    - RFC 2857
-  GOST      - RFC 5831
-  WHIRLPOOL - ISO/IEC 10118-3:2004
-  LM        - Microsoft Windows hash
-  NTLM      - Microsoft Windows hash
-  MYSQL     - MySQL 3, 4, 5 hash
-  CISCO7    - Cisco IOS type 7 encrypted passwords
-  JUNIPER   - Juniper Networks $9$ encrypted passwords
-  LDAP_MD5  - MD5 Base64 encoded
-  LDAP_SHA1 - SHA1 Base64 encoded
-
-  NOTE: for LM / NTLM it is recommended to introduce both values with this format:
-         python %s LM   -h 9a5760252b7455deaad3b435b51404ee:0d7f1f2bdeac6e574d6e18ca85fb58a7
-         python %s NTLM -h 9a5760252b7455deaad3b435b51404ee:0d7f1f2bdeac6e574d6e18ca85fb58a7
-
-
-Valid OPTIONS are:
-------------------
-
-  -h <hash_value>  If you only want to crack one hash, specify its value with this option.
-
-  -f <file>        If you have several hashes, you can specify a file with one hash per line.
-                   NOTE: All of them have to be the same type.
-
-  -g               If your hash cannot be cracked, search it in Google and show all the results.
-                   NOTE: This option ONLY works with -h (one hash input) option.
-
-
-Examples:
----------
-
-  -> Try to crack only one hash.
-     python %s MD5 -h 098f6bcd4621d373cade4e832627b4f6
-
-  -> Try to crack a JUNIPER encrypted password escaping special characters.
-     python %s JUNIPER -h "\$9\$LbHX-wg4Z"
-
-  -> If the hash cannot be cracked, it will be searched in Google.
-     python %s LDAP_SHA1 -h "{SHA}cRDtpNCeBiql5KOQsKVyrA0sAiA=" -g
-
-  -> Try to crack multiple hashes using a file (one hash per line).
-     python %s MYSQL -f mysqlhashesfile.txt
-
-
-Contact:
---------
-
-[Web]           http://laxmarcaellugar.blogspot.com/
-[Mail/Google+]  bloglaxmarcaellugar@gmail.com
-[twitter]       @laXmarcaellugar
-""" % ((sys.argv[0],) * 8)
-
-
 def crackHash(algorithm, hashvalue=None, hashfile=None):
     """Crack a hash or all the hashes of a file.
 
@@ -996,32 +922,105 @@ def searchHash(hashvalue):
         print "\n\nGoogle doesn't have any result. Sorry!\n"
 
 
-def main():
+def main(args):
     """Main method."""
 
-    if len(sys.argv) < 4:
-        printSyntax()
+    parser = argparse.ArgumentParser(
+        prog="findmyhash",
+        description="""Cracks a hash from remote webservices
+
+Accepted algorithms are:
+------------------------
+
+  MD4       - RFC 1320
+  MD5       - RFC 1321
+  SHA1      - RFC 3174 (FIPS 180-3)
+  SHA224    - RFC 3874 (FIPS 180-3)
+  SHA256    - FIPS 180-3
+  SHA384    - FIPS 180-3
+  SHA512    - FIPS 180-3
+  RMD160    - RFC 2857
+  GOST      - RFC 5831
+  WHIRLPOOL - ISO/IEC 10118-3:2004
+  LM        - Microsoft Windows hash
+  NTLM      - Microsoft Windows hash
+  MYSQL     - MySQL 3, 4, 5 hash
+  CISCO7    - Cisco IOS type 7 encrypted passwords
+  JUNIPER   - Juniper Networks $9$ encrypted passwords
+  LDAP_MD5  - MD5 Base64 encoded
+  LDAP_SHA1 - SHA1 Base64 encoded
+
+  NOTE: for LM / NTLM it is recommended to introduce both values with this format:
+         python %s --type LM --hash 9a5760252b7455deaad3b435b51404ee:0d7f1f2bdeac6e574d6e18ca85fb58a7
+         python %s --type NTLM --hash 9a5760252b7455deaad3b435b51404ee:0d7f1f2bdeac6e574d6e18ca85fb58a7
+        """ % ((args[0],) * 2),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""Examples:
+---------
+
+  -> Try to crack only one hash.
+     python %s --type MD5 --hash 098f6bcd4621d373cade4e832627b4f6
+
+  -> Try to crack a JUNIPER encrypted password escaping special characters.
+     python %s --type JUNIPER --hash "\$9\$LbHX-wg4Z"
+
+  -> If the hash cannot be cracked, it will be searched in Google.
+     python %s --type LDAP_SHA1 --hash "{SHA}cRDtpNCeBiql5KOQsKVyrA0sAiA=" -g
+
+  -> Try to crack multiple hashes using a file (one hash per line).
+     python %s MYSQL --file mysqlhashesfile.txt
+
+
+Contact:
+--------
+
+[Github]: https://github.com/Talanor/findmyhash
+""" % ((args[0],) * 4)
+    )
+    parser.add_argument(
+        "--type", "-t",
+        nargs=1, metavar='TYPE',
+        action='store', default=None,
+        help="Hash type (MD5, SHA1, ...)"
+    )
+    parser.add_argument(
+        "--hash", "-s",
+        nargs=1, metavar="HASH",
+        action='store', default=None,
+        help="Hash value"
+    )
+    parser.add_argument(
+        "--file", "-f",
+        nargs=1, metavar="FILE",
+        action='store', default=None,
+        help="Path to a file containing hashes"
+    )
+    parser.add_argument(
+        "--version", "-V",
+        action="version", version="%(prog)s 1.1.3a",
+        help="findmyhash's version"
+    )
+    parser.add_argument(
+        "--google", "-g",
+        action='store_const', const=True, default=False,
+        help="Indicates that findmyhash should search hashes on google \
+            if the lookup on the webservices failed to identify the hash"
+    )
+
+    ns = parser.parse_args(args[1:])
+    # Retrieve arg dict
+    ns = dict(ns._get_kwargs())
+
+    if ("help" in ns and ns["help"] is True) \
+            or any((ns["file"], ns["hash"])) is False \
+            or ns["type"] is None:
+        parser.print_help()
         sys.exit(1)
 
-    else:
-        try:
-            opts, args = getopt.getopt(sys.argv[2:], "gh:f:")
-        except:
-            printSyntax()
-            sys.exit(1)
-
-    algorithm = sys.argv[1].lower()
-    hashvalue = None
-    hashfile = None
-    googlesearch = False
-
-    for opt, arg in opts:
-        if opt == '-h':
-            hashvalue = arg
-        elif opt == '-f':
-            hashfile = arg
-        else:
-            googlesearch = True
+    algorithm = ns["type"][0].lower()
+    hashvalue = None if ns["hash"] is None else ns["hash"][0]
+    hashfile = None if ns["file"] is None else ns["file"][0]
+    googlesearch = ns["google"]
 
     configureCookieProcessor()
 
@@ -1036,4 +1035,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv)
