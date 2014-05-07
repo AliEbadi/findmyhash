@@ -34,24 +34,6 @@ import traceback
 from modules import *
 
 
-MD4 = "md4"
-MD5 = "md5"
-SHA1 = "sha1"
-SHA224 = "sha224"
-SHA256 = "sha256"
-SHA384 = "sha384"
-SHA512 = "sha512"
-RIPEMD = "rmd160"
-LM = "lm"
-NTLM = "ntlm"
-MYSQL = "mysql"
-CISCO7 = "cisco7"
-JUNIPER = "juniper"
-GOST = "gost"
-WHIRLPOOL = "whirlpool"
-LDAP_MD5 = "ldap_md5"
-LDAP_SHA1 = "ldap_sha1"
-
 if sys.version[0] == "3":
     hashlib_algorithms = hashlib.algorithms_available
 else:
@@ -62,32 +44,6 @@ USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 \
 (KHTML, like Gecko) Chrome/34.0.1847.131 Safari/537.36"
 ]
-# USER_AGENTS = [
-#     "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; \
-#         SV1; Crazy Browser 1.0.5)",
-#     "curl/7.7.2 (powerpc-apple-darwin6.0) libcurl 7.7.2 (OpenSSL 0.9.6b)",
-#     "Mozilla/5.0 (X11; U; Linux amd64; en-US; rv:5.0) Gecko/20110619 \
-#         Firefox/5.0",
-#     "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:2.0b8pre) Gecko/20101213 \
-#         Firefox/4.0b8pre",
-#     "Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0)",
-#     "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 7.1; Trident/5.0)",
-#     "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0) \
-#         chromeframe/10.0.648.205",
-#     "Mozilla/5.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0; \
-#         InfoPath.2; SLCC1; .NET CLR 3.0.4506.2152; .NET CLR 3.5.30729; \
-#         .NET CLR 2.0.50727)",
-#     "Opera/9.80 (Windows NT 6.1; U; sv) Presto/2.7.62 Version/11.01",
-#     "Opera/9.80 (Windows NT 6.1; U; pl) Presto/2.7.62 Version/11.00",
-#     "Opera/9.80 (X11; Linux i686; U; pl) Presto/2.6.30 Version/10.61",
-#     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_0) AppleWebKit/535.2 \
-#         (KHTML, like Gecko) Chrome/15.0.861.0 Safari/535.2",
-#     "Mozilla/5.0 (Windows NT 5.1) AppleWebKit/535.2 (KHTML, like Gecko) \
-#         Chrome/15.0.872.0 Safari/535.2",
-#     "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/535.1 (KHTML, like Gecko) \
-#         Chrome/14.0.812.0 Safari/535.1",
-#     "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
-# ]
 
 
 def crackHash(algorithm, hashvalue=None, hashfile=None):
@@ -256,8 +212,6 @@ def searchHash(hashvalue):
 
     @param hashvalue The hash is been looking for.'''
 
-    start = 0
-    finished = False
     results = []
 
     sys.stdout.write("\nThe hash wasn't found in any database. \
@@ -320,28 +274,7 @@ def main(args):
 Accepted algorithms are:
 ------------------------
 
-  MD4       - RFC 1320
-  MD5       - RFC 1321
-  SHA1      - RFC 3174 (FIPS 180-3)
-  SHA224    - RFC 3874 (FIPS 180-3)
-  SHA256    - FIPS 180-3
-  SHA384    - FIPS 180-3
-  SHA512    - FIPS 180-3
-  RMD160    - RFC 2857
-  GOST      - RFC 5831
-  WHIRLPOOL - ISO/IEC 10118-3:2004
-  LM        - Microsoft Windows hash
-  NTLM      - Microsoft Windows hash
-  MYSQL     - MySQL 3, 4, 5 hash
-  CISCO7    - Cisco IOS type 7 encrypted passwords
-  JUNIPER   - Juniper Networks $9$ encrypted passwords
-  LDAP_MD5  - MD5 Base64 encoded
-  LDAP_SHA1 - SHA1 Base64 encoded
-
-  NOTE: for LM / NTLM it is recommended to introduce both values with this format:
-         python %s --type LM --hash 9a5760252b7455deaad3b435b51404ee:0d7f1f2bdeac6e574d6e18ca85fb58a7
-         python %s --type NTLM --hash 9a5760252b7455deaad3b435b51404ee:0d7f1f2bdeac6e574d6e18ca85fb58a7
-        """ % ((args[0],) * 2),
+""" + "\n".join(SUPPORTED_ALGORITHMS),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""Examples:
 ---------
