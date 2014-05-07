@@ -15,6 +15,9 @@ dirpath = os.path.dirname(
 
 sys.path.append(dirpath)
 
+import utils
+from algos import *
+
 from model import Cracker
 
 #Probably not the best way to do it, but works for now

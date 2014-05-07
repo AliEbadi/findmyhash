@@ -33,7 +33,6 @@ import base64
 import traceback
 from modules import *
 
-
 if sys.version[0] == "3":
     hashlib_algorithms = hashlib.algorithms_available
 else:
@@ -46,12 +45,78 @@ USER_AGENTS = [
 ]
 
 
-def crackHash(algorithm, hashvalue=None, hashfile=None):
+def crack_hash(cracker, algorithm, hashvalue):
+    if algorithm not in cracker.ALGORITHMS:
+        return None
+
+    # Crack the hash
+    result = None
+    try:
+        result = cracker.crack(hashvalue, algorithm)
+    # If it was some trouble, exit
+    except:
+        info = sys.exc_info()
+        print("\nSomething was wrong. Please, contact us \
+to report the bug:\n%s %s\n\n\
+https://github.com/Talanor/findmyhash\n" % (str(info[0]), str(info[1])))
+        traceback.print_exc()
+        return None
+
+    # If there is any result...
+    if result:
+        # If it is a hashlib supported algorithm...
+        if algorithm.upper() in map(str.upper, hashlib_algorithms):
+            # Hash value is calculated to compare with cracker result
+            h = hashlib.new(algorithm)
+            h.update(utils.to_bytes(result))
+
+            if h.hexdigest() == hashvalue:
+                result = (result, True)
+            else:
+                result = None
+
+        # If it is a half-supported hashlib algorithm
+        elif algorithm in [LDAP_MD5, LDAP_SHA1]:
+            alg = algorithm.split('_')[1]
+            ahash = base64.decodestring(activehash.split('}')[1])
+
+            # Hash value is calculated to compare with cracker result
+            h = hashlib.new(alg)
+            h.update(result)
+
+            if h.digest() == ahash:
+                result = (result, True)
+            else:
+                result = None
+
+        elif algorithm == NTLM or \
+                (algorithm == LM and ':' in activehash):
+            # NTLM Hash value is calculated to compare
+            # with cracker result
+            candidate = hashlib.new(
+                'md4',
+                result.split()[-1].encode('utf-16le')
+            ).hexdigest()
+
+            # It's a LM:NTLM combination or a single NTLM hash
+            if (':' in activehash and
+                candidate == activehash.split(':')[1]) \
+                    or (':' not in activehash
+                        and candidate == activehash):
+                result = (result, True)
+        else:
+            result = (result, False)
+    else:
+        result = None
+
+    return result
+
+
+def crackloop_hash(algorithm, hashvalues):
     """Crack a hash or all the hashes of a file.
 
     @param alg Algorithm of the hash (MD5, SHA1...).
     @param hashvalue Hash value to be cracked.
-    @param hashfile Path of the hash file.
     @return If the hash has been cracked or not."""
 
     # Cracked hashes will be stored here
@@ -60,22 +125,9 @@ def crackHash(algorithm, hashvalue=None, hashfile=None):
     # Is the hash cracked?
     cracked = False
 
-    # Only one of the two possible inputs can be setted.
-    if (not hashvalue and not hashfile) or (hashvalue and hashfile):
-        return False
-
     # hashestocrack depends on the input value
-    hashestocrack = None
-    if hashvalue:
-        hashestocrack = [hashvalue]
-    else:
-        try:
-            hashestocrack = open(hashfile, "r")
-        except:
-            print("\nError reading input file (%s)\n" % (hashfile))
-            return cracked
 
-    for activehash in hashestocrack:
+    for activehash in hashvalues:
         hashresults = []
 
         # Standarize the hash
@@ -89,86 +141,21 @@ def crackHash(algorithm, hashvalue=None, hashfile=None):
         random.shuffle(cracker_list)
 
         for cr in cracker_list:
-
             if not cr.algo_supported(algorithm):
                 continue
 
             # Analyze the hash
             print("Analyzing with %s (%s)..." % (cr.NAME, cr.URL))
 
-            # Crack the hash
-            result = None
-            try:
-                result = cr.crack(activehash, algorithm)
-            # If it was some trouble, exit
-            except:
-                info = sys.exc_info()
-                print("\nSomething was wrong. Please, contact us \
-to report the bug:\n%s %s\n\n\
-https://github.com/Talanor/findmyhash\n" % (str(info[0]), str(info[1])))
-                traceback.print_exc()
-                if hashfile:
-                    try:
-                        hashestocrack.close()
-                    except:
-                        pass
-                return False
+            result = crack_hash(cr, algorithm, activehash)
 
-            # If there is any result...
-            cracked = 0
-            if result:
-
-                # If it is a hashlib supported algorithm...
-                if algorithm in hashlib_algorithms:
-                    # Hash value is calculated to compare with cracker result
-                    h = hashlib.new(algorithm)
-                    h.update(utils.to_bytes(result))
-
-                    if h.hexdigest() == activehash:
-                        hashresults.append(result)
-                        cracked = 2
-
-                # If it is a half-supported hashlib algorithm
-                elif algorithm in [LDAP_MD5, LDAP_SHA1]:
-                    alg = algorithm.split('_')[1]
-                    ahash = base64.decodestring(activehash.split('}')[1])
-
-                    # Hash value is calculated to compare with cracker result
-                    h = hashlib.new(alg)
-                    h.update(result)
-
-                    if h.digest() == ahash:
-                        hashresults.append(result)
-                        cracked = 2
-
-                elif algorithm == NTLM or \
-                        (algorithm == LM and ':' in activehash):
-                    # NTLM Hash value is calculated to compare
-                    # with cracker result
-                    candidate = hashlib.new(
-                        'md4',
-                        result.split()[-1].encode('utf-16le')
-                    ).hexdigest()
-
-                    # It's a LM:NTLM combination or a single NTLM hash
-                    if (':' in activehash and
-                        candidate == activehash.split(':')[1]) \
-                            or (':' not in activehash
-                                and candidate == activehash):
-                        hashresults.append(result)
-                        cracked = 2
-
-                # If it is another algorithm, we search in all the crackers
-                else:
-                    hashresults.append(result)
-                    cracked = 1
-
-            # Had the hash cracked?
-            if cracked:
+            # Had the hash been cracked?
+            if result is not None:
+                hashresults.append(result[0])
                 print("\n***** HASH CRACKED!! *****\n\
-The original string is: %s\n" % (result))
+    The original string is: %s\n" % (result[0],))
                 # If result was verified, break
-                if cracked == 2:
+                if result[1] is True:
                     break
             else:
                 print("... hash not found in %s\n" % (cr.NAME))
@@ -188,12 +175,6 @@ The original string is: %s\n" % (result))
             # Valid results are stored
             crackedhashes.append((activehash, finalresult))
 
-    if hashfile:
-        try:
-            hashestocrack.close()
-        except:
-            pass
-
     # Show a resume of all the cracked hashes
     print("\nThe following hashes were cracked:\n\
 ----------------------------------\n")
@@ -206,7 +187,7 @@ The original string is: %s\n" % (result))
     return (cracked)
 
 
-def searchHash(hashvalue):
+def google_hash(hashvalue):
     '''Google the hash value looking for any result which
     could give some clue...
 
@@ -258,7 +239,7 @@ to check them manually:\n")
         results.sort()
         for r in results:
             print("  *> %s" % (r))
-        print
+        print("")
 
     else:
         print("\n\nGoogle doesn't have any result. Sorry!\n")
@@ -347,10 +328,10 @@ Contact:
 
     cracked = 0
 
-    cracked = crackHash(algorithm, hashvalue, hashfile)
+    cracked = crackloop_hash(algorithm, [hashvalue])
 
     if not cracked and googlesearch and not hashfile:
-        searchHash(hashvalue)
+        google_hash(hashvalue)
 
 
 if __name__ == "__main__":
