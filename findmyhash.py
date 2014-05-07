@@ -135,8 +135,6 @@ def crackloop_hash(algorithm, hashvalues):
         if algorithm not in [JUNIPER, LDAP_MD5, LDAP_SHA1]:
             activehash = activehash.lower()
 
-        print("\nCracking hash: %s\n" % (activehash))
-
         cracker_list = Cracker.__subclasses__()
         random.shuffle(cracker_list)
 
@@ -144,21 +142,14 @@ def crackloop_hash(algorithm, hashvalues):
             if not cr.algo_supported(algorithm):
                 continue
 
-            # Analyze the hash
-            print("Analyzing with %s (%s)..." % (cr.NAME, cr.URL))
-
             result = crack_hash(cr, algorithm, activehash)
 
             # Had the hash been cracked?
             if result is not None:
                 hashresults.append(result[0])
-                print("\n***** HASH CRACKED!! *****\n\
-    The original string is: %s\n" % (result[0],))
                 # If result was verified, break
                 if result[1] is True:
                     break
-            else:
-                print("... hash not found in %s\n" % (cr.NAME))
 
         if hashresults:
             resultlist = []
@@ -175,16 +166,17 @@ def crackloop_hash(algorithm, hashvalues):
             # Valid results are stored
             crackedhashes.append((activehash, finalresult))
 
+    return crackedhashes
     # Show a resume of all the cracked hashes
-    print("\nThe following hashes were cracked:\n\
-----------------------------------\n")
-    print(crackedhashes and "\n".join(
-        "%s -> %s" % (hashvalue, result.strip())
-        for hashvalue, result in crackedhashes
-    ) or "NO HASH WAS CRACKED.")
-    print("")
+#     print("\nThe following hashes were cracked:\n\
+# ----------------------------------\n")
+#     print(crackedhashes and "\n".join(
+#         "%s -> %s" % (hashvalue, result.strip())
+#         for hashvalue, result in crackedhashes
+#     ) or "NO HASH WAS CRACKED.")
+#     print("")
 
-    return (cracked)
+#     return (cracked)
 
 
 def google_hash(hashvalue):
@@ -194,13 +186,6 @@ def google_hash(hashvalue):
     @param hashvalue The hash is been looking for.'''
 
     results = []
-
-    sys.stdout.write("\nThe hash wasn't found in any database. \
-Maybe Google has any idea...\nLooking for results...")
-    sys.stdout.flush()
-
-    sys.stdout.write('.')
-    sys.stdout.flush()
 
     # Build the URL
     url = "http://www.google.com/search?hl=en&q=%s&filter=0" % (hashvalue)
@@ -233,17 +218,9 @@ Maybe Google has any idea...\nLooking for results...")
         results = []
 
     if results:
-        print("\n\nGoogle has some results. Maybe you would like \
-to check them manually:\n")
-
         results.sort()
-        for r in results:
-            print("  *> %s" % (r))
-        print("")
 
-    else:
-        print("\n\nGoogle doesn't have any result. Sorry!\n")
-
+    return results
 
 def main(args):
     """Main method."""
@@ -326,12 +303,17 @@ Contact:
 
     random.seed()
 
-    cracked = 0
+    cracked_hashes = crackloop_hash(algorithm, [hashvalue])
 
-    cracked = crackloop_hash(algorithm, [hashvalue])
-
-    if not cracked and googlesearch and not hashfile:
-        google_hash(hashvalue)
+    if len(cracked_hashes) > 0:
+        print("Hashes:")
+        for cracked_hash, original in cracked_hashes:
+            print("%s: %s" % (cracked_hash, original))
+    elif googlesearch:
+        links = google_hash(hashvalue)
+        print("Google:")
+        for link in links:
+            print(link)
 
 
 if __name__ == "__main__":
