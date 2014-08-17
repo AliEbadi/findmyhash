@@ -32,6 +32,7 @@ import re
 import base64
 import traceback
 import string
+import collections
 from modules import *
 
 if sys.version[0] == "3":
@@ -40,9 +41,16 @@ else:
     hashlib_algorithms = hashlib.algorithms
 
 
+#Can find some more there :
+#http://www.useragentstring.com/pages/useragentstring.php
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 \
-(KHTML, like Gecko) Chrome/34.0.1847.131 Safari/537.36"
+(KHTML, like Gecko) Chrome/34.0.1847.131 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0",
+    "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 \
+(KHTML, like Gecko) Chrome/37.0.2049.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 \
+(KHTML, like Gecko) Chrome/36.0.1985.67 Safari/537.36"
 ]
 
 
@@ -144,64 +152,61 @@ def crackloop_hash(hashvalues):
     @return If the hash has been cracked or not."""
 
     # Cracked hashes will be stored here
-    crackedhashes = []
+    hashes_results = collections.OrderedDict()
 
     # hashestocrack depends on the input value
 
     for activehash in hashvalues:
+        hash_state = {
+            "hash": activehash,
+            "cracked": False,
+            "value": None,
+            "type": None,
+            "verified" : False
+        }
         algorithms = guess_hash_type(activehash)
         if algorithms is None:
             print("hash type could not be guessed")
-            continue
+        else:
+            for algorithm in algorithms:
+                print("Trying to find %s hash : '%s'" % (algorithm, activehash))
+                hashresults = []
 
-        for algorithm in algorithms:
-            print("Trying to find %s hash : '%s'" % (algorithm, activehash))
-            hashresults = []
+                # Standarize the hash
+                activehash = activehash.strip()
+                if algorithm not in [JUNIPER, LDAP_MD5, LDAP_SHA1]:
+                    activehash = activehash.lower()
 
-            # Standarize the hash
-            activehash = activehash.strip()
-            if algorithm not in [JUNIPER, LDAP_MD5, LDAP_SHA1]:
-                activehash = activehash.lower()
+                cracker_list = Cracker.__subclasses__()
+                random.shuffle(cracker_list)
 
-            cracker_list = Cracker.__subclasses__()
-            random.shuffle(cracker_list)
+                result = None
 
-            result = None
+                for cr in cracker_list:
+                    if not cr.algo_supported(algorithm):
+                        continue
 
-            for cr in cracker_list:
-                if not cr.algo_supported(algorithm):
-                    continue
+                    print(" Cracker : %s" % (cr.NAME))
 
-                print(" Cracker : %s" % (cr.NAME))
+                    result = crack_hash(cr, algorithm, activehash)
 
-                result = crack_hash(cr, algorithm, activehash)
+                    # Had the hash been cracked?
+                    if result is not None:
+                        hashresults.append(result[0])
+                        hash_state["value"] = result[0]
+                        hash_state["type"] = algorithm
+                        hash_state["cracked"] = True
+                        # If result was verified, break
+                        if result[1] is True:
+                            hash_state["verified"] = True
+                            break
 
-                # Had the hash been cracked?
-                if result is not None:
-                    hashresults.append(result[0])
-                    # If result was verified, break
-                    if result[1] is True:
-                        break
+                if result is not None and result[1] is True:
+                    break
 
-            if result is not None and result[1] is True:
-                break
+        hashes_results[activehash] = hash_state
 
-        if hashresults:
-            resultlist = []
-            for r in hashresults:
-                if r not in resultlist:
-                    resultlist.append(r)
-
-            finalresult = ""
-            if len(resultlist) > 1:
-                finalresult = ', '.join(resultlist)
-            else:
-                finalresult = resultlist[0]
-
-            # Valid results are stored
-            crackedhashes.append((activehash, finalresult))
-
-    return crackedhashes
+    return hashes_results
 
 
 def google_hash(hashvalue):
@@ -341,8 +346,11 @@ Contact:
 
     if len(cracked_hashes) > 0:
         print("Hashes:")
-        for cracked_hash, original in cracked_hashes:
-            print("%s: %s" % (cracked_hash, original))
+        for original, cracked_hash in cracked_hashes.items():
+            if cracked_hash["cracked"] is True:
+                print("%s: %s (%s) " % (original, cracked_hash["value"], cracked_hash["type"]))
+            else:
+                print("%s: Not Found" % (original))
     elif googlesearch:
         links = google_hash(hashvalue)
         print("Google:")
