@@ -31,6 +31,7 @@ import argparse
 import re
 import base64
 import traceback
+import string
 from modules import *
 
 if sys.version[0] == "3":
@@ -43,6 +44,30 @@ USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 \
 (KHTML, like Gecko) Chrome/34.0.1847.131 Safari/537.36"
 ]
+
+
+def isHex(s):
+    return all(map(lambda x: x in string.hexdigits, s))
+
+
+#Obviously this function is not generic and contains errors, please report
+#them if you find any
+def guess_hash_type(hash):
+    if len(hash) == 12:
+        return ["juniper"]
+    elif len(hash) == 32:
+        return ["md5", "md4", "ntlm"]
+    elif len(hash) == 40:
+        return ["sha1", 'ripemd']
+    elif len(hash) == 56:
+        return ["sha224"]
+    elif len(hash) == 64:
+        return ["sha256", 'gost']
+    elif len(hash) == 96:
+        return ["sha384"]
+    elif len(hash) == 128:
+        return ["whirlpool", "sha512"]
+    return None
 
 
 def crack_hash(cracker, algorithm, hashvalue):
@@ -78,7 +103,7 @@ https://github.com/Talanor/findmyhash\n" % (str(info[0]), str(info[1])))
         # If it is a half-supported hashlib algorithm
         elif algorithm in [LDAP_MD5, LDAP_SHA1]:
             alg = algorithm.split('_')[1]
-            ahash = base64.decodestring(activehash.split('}')[1])
+            ahash = base64.decodestring(hashvalue.split('}')[1])
 
             # Hash value is calculated to compare with cracker result
             h = hashlib.new(alg)
@@ -90,7 +115,7 @@ https://github.com/Talanor/findmyhash\n" % (str(info[0]), str(info[1])))
                 result = None
 
         elif algorithm == NTLM or \
-                (algorithm == LM and ':' in activehash):
+                (algorithm == LM and ':' in hashvalue):
             # NTLM Hash value is calculated to compare
             # with cracker result
             candidate = hashlib.new(
@@ -99,10 +124,10 @@ https://github.com/Talanor/findmyhash\n" % (str(info[0]), str(info[1])))
             ).hexdigest()
 
             # It's a LM:NTLM combination or a single NTLM hash
-            if (':' in activehash and
-                candidate == activehash.split(':')[1]) \
-                    or (':' not in activehash
-                        and candidate == activehash):
+            if (':' in hashvalue and
+                candidate == hashvalue.split(':')[1]) \
+                    or (':' not in hashvalue
+                        and candidate == hashvalue):
                 result = (result, True)
         else:
             result = (result, False)
@@ -112,44 +137,54 @@ https://github.com/Talanor/findmyhash\n" % (str(info[0]), str(info[1])))
     return result
 
 
-def crackloop_hash(algorithm, hashvalues):
+def crackloop_hash(hashvalues):
     """Crack a hash or all the hashes of a file.
 
-    @param alg Algorithm of the hash (MD5, SHA1...).
     @param hashvalue Hash value to be cracked.
     @return If the hash has been cracked or not."""
 
     # Cracked hashes will be stored here
     crackedhashes = []
 
-    # Is the hash cracked?
-    cracked = False
-
     # hashestocrack depends on the input value
 
     for activehash in hashvalues:
-        hashresults = []
+        algorithms = guess_hash_type(activehash)
+        if algorithms is None:
+            print("hash type could not be guessed")
+            continue
 
-        # Standarize the hash
-        activehash = activehash.strip()
-        if algorithm not in [JUNIPER, LDAP_MD5, LDAP_SHA1]:
-            activehash = activehash.lower()
+        for algorithm in algorithms:
+            print("Trying to find %s hash : '%s'" % (algorithm, activehash))
+            hashresults = []
 
-        cracker_list = Cracker.__subclasses__()
-        random.shuffle(cracker_list)
+            # Standarize the hash
+            activehash = activehash.strip()
+            if algorithm not in [JUNIPER, LDAP_MD5, LDAP_SHA1]:
+                activehash = activehash.lower()
 
-        for cr in cracker_list:
-            if not cr.algo_supported(algorithm):
-                continue
+            cracker_list = Cracker.__subclasses__()
+            random.shuffle(cracker_list)
 
-            result = crack_hash(cr, algorithm, activehash)
+            result = None
 
-            # Had the hash been cracked?
-            if result is not None:
-                hashresults.append(result[0])
-                # If result was verified, break
-                if result[1] is True:
-                    break
+            for cr in cracker_list:
+                if not cr.algo_supported(algorithm):
+                    continue
+
+                print(" Cracker : %s" % (cr.NAME))
+
+                result = crack_hash(cr, algorithm, activehash)
+
+                # Had the hash been cracked?
+                if result is not None:
+                    hashresults.append(result[0])
+                    # If result was verified, break
+                    if result[1] is True:
+                        break
+
+            if result is not None and result[1] is True:
+                break
 
         if hashresults:
             resultlist = []
@@ -167,16 +202,6 @@ def crackloop_hash(algorithm, hashvalues):
             crackedhashes.append((activehash, finalresult))
 
     return crackedhashes
-    # Show a resume of all the cracked hashes
-#     print("\nThe following hashes were cracked:\n\
-# ----------------------------------\n")
-#     print(crackedhashes and "\n".join(
-#         "%s -> %s" % (hashvalue, result.strip())
-#         for hashvalue, result in crackedhashes
-#     ) or "NO HASH WAS CRACKED.")
-#     print("")
-
-#     return (cracked)
 
 
 def google_hash(hashvalue):
@@ -222,6 +247,7 @@ def google_hash(hashvalue):
 
     return results
 
+
 def main(args):
     """Main method."""
 
@@ -238,16 +264,16 @@ Accepted algorithms are:
 ---------
 
   -> Try to crack only one hash.
-     python %s --type MD5 --hash 098f6bcd4621d373cade4e832627b4f6
+     python %s --hash 098f6bcd4621d373cade4e832627b4f6
 
   -> Try to crack a JUNIPER encrypted password escaping special characters.
-     python %s --type JUNIPER --hash "\$9\$LbHX-wg4Z"
+     python %s --hash "\$9\$LbHX-wg4Z"
 
   -> If the hash cannot be cracked, it will be searched in Google.
-     python %s --type LDAP_SHA1 --hash "{SHA}cRDtpNCeBiql5KOQsKVyrA0sAiA=" -g
+     python %s --hash "{SHA}cRDtpNCeBiql5KOQsKVyrA0sAiA=" -g
 
   -> Try to crack multiple hashes using a file (one hash per line).
-     python %s MYSQL --file mysqlhashesfile.txt
+     python %s --file mysqlhashesfile.txt
 
 
 Contact:
@@ -255,12 +281,6 @@ Contact:
 
 [Github]: https://github.com/Talanor/findmyhash
 """ % ((args[0],) * 4)
-    )
-    parser.add_argument(
-        "--type", "-t",
-        nargs=1, metavar='TYPE',
-        action='store', default=None,
-        help="Hash type (MD5, SHA1, ...)"
     )
     parser.add_argument(
         "--hash", "-s",
@@ -291,19 +311,33 @@ Contact:
     ns = dict(ns._get_kwargs())
 
     if ("help" in ns and ns["help"] is True) \
-            or any((ns["file"], ns["hash"])) is False \
-            or ns["type"] is None:
+            or any((ns["file"], ns["hash"])) is False:
         parser.print_help()
         sys.exit(1)
 
-    algorithm = ns["type"][0].lower()
-    hashvalue = None if ns["hash"] is None else ns["hash"][0]
-    hashfile = None if ns["file"] is None else ns["file"][0]
+    hashvalues = [] if ns["hash"] is None else ns["hash"]
     googlesearch = ns["google"]
+
+    try:
+        if ns["hashfile"] is not None:
+            try:
+                with open(ns["hashfile"], "r") as f:
+                    hashvalues.extend(f.readlines())
+            except:
+                print("An error occured while opening the file \
+                      file: %s" % ns["hashfile"])
+                print(sys.exc_info())
+                sys.exit(1)
+    except KeyError:
+        pass
+    except:
+        print("An error occured")
+        print(sys.exc_info())
+        system.exit(1)
 
     random.seed()
 
-    cracked_hashes = crackloop_hash(algorithm, [hashvalue])
+    cracked_hashes = crackloop_hash(hashvalues)
 
     if len(cracked_hashes) > 0:
         print("Hashes:")
