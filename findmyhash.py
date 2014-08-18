@@ -89,9 +89,14 @@ def crack_hash(cracker, algorithm, hashvalue):
     # If it was some trouble, exit
     except:
         info = sys.exc_info()
-        print("\nSomething was wrong. Please, contact us \
-to report the bug:\n%s %s\n\n\
-https://github.com/Talanor/findmyhash\n" % (str(info[0]), str(info[1])))
+        print("""
+Something was wrong. Please, contact us
+to report the bug:
+%s %s
+
+
+https://github.com/Talanor/findmyhash
+""" % (str(info[0]), str(info[1])))
         traceback.print_exc()
         return None
 
@@ -188,7 +193,7 @@ def crackloop_hash(hashvalues):
 
                     result = crack_hash(cr, algorithm, activehash)
 
-                    # Had the hash been cracked?
+                    # Has the hash been cracked?
                     if result is not None:
                         hashresults.append(result[0])
                         hash_state["value"] = result[0]
@@ -201,6 +206,7 @@ def crackloop_hash(hashvalues):
 
                 if result is not None and result[1] is True:
                     break
+
         results[0 if hash_state["cracked"] is True else 1][activehash] = \
             hash_state
 
