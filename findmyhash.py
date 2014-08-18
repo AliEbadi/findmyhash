@@ -291,7 +291,7 @@ def getLinesFiles(urls):
         try:
             if urlinfos.scheme == '' and urlinfos.netloc == '':
                 fileslines[url]["lines"] = getLinesLocalFile(url)
-            elif urlinfos.scheme == 'http':
+            elif urlinfos.scheme == 'http' or urlinfos.scheme == 'https':
                 fileslines[url]["lines"] = getLinesHTTP(url)
             else:
                 fileslines[url]["succes"] = False
