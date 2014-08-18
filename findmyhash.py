@@ -253,6 +253,56 @@ def google_hash(hashvalue):
     return results
 
 
+def getLinesLocalFile(url):
+    lines = []
+    with open(url, 'r') as f:
+        lines = [line.rstrip("\n") for line in f.readlines()]
+    return lines
+
+
+def getLinesHTTP(url):
+    if sys.version[0] == "3":
+        from urllib.request import urlopen
+    else:
+        from urllib import urlopen
+
+    response = urlopen(url)
+
+    if response.getcode() == 404:
+        raise Exception
+
+    return [line.rstrip("\n") for line in response.readlines()]
+
+
+def getLinesFiles(urls):
+    if sys.version[0] == "3":
+        from urllib.parse import urlparse
+    else:
+        from urlparse import urlparse
+
+    fileslines = collections.OrderedDict()
+
+    for url in urls:
+        urlinfos = urlparse(url)
+        fileslines[url] = {
+            "succes": True,
+            "lines": []
+        }
+        try:
+            if urlinfos.scheme == '' and urlinfos.netloc == '':
+                fileslines[url]["lines"] = getLinesLocalFile(url)
+            elif urlinfos.scheme == 'http':
+                fileslines[url]["lines"] = getLinesHTTP(url)
+            else:
+                fileslines[url]["succes"] = False
+                print(urlinfos)
+        except:
+            print(sys.exc_info())
+            fileslines[url]["succes"] = False
+
+    return fileslines
+
+
 def main(args):
     """Main method."""
 
@@ -323,22 +373,12 @@ Contact:
     hashvalues = [] if ns["hash"] is None else ns["hash"]
     googlesearch = ns["google"]
 
-    try:
-        if ns["hashfile"] is not None:
-            try:
-                with open(ns["hashfile"], "r") as f:
-                    hashvalues.extend(f.readlines())
-            except:
-                print("An error occured while opening the file \
-                      file: %s" % ns["hashfile"])
-                print(sys.exc_info())
-                sys.exit(1)
-    except KeyError:
-        pass
-    except:
-        print("An error occured")
-        print(sys.exc_info())
-        system.exit(1)
+    if ns["file"] is not None and len(ns["file"]) > 0:
+        for key, val in getLinesFiles(ns["file"]).items():
+            if val["succes"] is True:
+                hashvalues.extend(val["lines"])
+            else:
+                print("Failure to open %s" % key)
 
     random.seed()
 
