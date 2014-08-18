@@ -152,7 +152,10 @@ def crackloop_hash(hashvalues):
     @return If the hash has been cracked or not."""
 
     # Cracked hashes will be stored here
-    hashes_results = collections.OrderedDict()
+    results = (
+        collections.OrderedDict(),
+        collections.OrderedDict()
+    )
 
     # hashestocrack depends on the input value
 
@@ -162,14 +165,11 @@ def crackloop_hash(hashvalues):
             "cracked": False,
             "value": None,
             "type": None,
-            "verified" : False
+            "verified": False
         }
         algorithms = guess_hash_type(activehash)
-        if algorithms is None:
-            print("hash type could not be guessed")
-        else:
+        if algorithms is not None:
             for algorithm in algorithms:
-                print("Trying to find %s hash : '%s'" % (algorithm, activehash))
                 hashresults = []
 
                 # Standarize the hash
@@ -186,8 +186,6 @@ def crackloop_hash(hashvalues):
                     if not cr.algo_supported(algorithm):
                         continue
 
-                    print(" Cracker : %s" % (cr.NAME))
-
                     result = crack_hash(cr, algorithm, activehash)
 
                     # Had the hash been cracked?
@@ -203,10 +201,10 @@ def crackloop_hash(hashvalues):
 
                 if result is not None and result[1] is True:
                     break
+        results[0 if hash_state["cracked"] is True else 1][activehash] = \
+            hash_state
 
-        hashes_results[activehash] = hash_state
-
-    return hashes_results
+    return results
 
 
 def google_hash(hashvalue):
@@ -385,12 +383,19 @@ Contact:
     cracked_hashes = crackloop_hash(hashvalues)
 
     if len(cracked_hashes) > 0:
-        print("Hashes:")
-        for original, cracked_hash in cracked_hashes.items():
-            if cracked_hash["cracked"] is True:
-                print("%s: %s (%s) " % (original, cracked_hash["value"], cracked_hash["type"]))
-            else:
-                print("%s: Not Found" % (original))
+        for title, d in zip(("cracked", "not cracked"), cracked_hashes):
+            if len(d) == 0:
+                continue
+            print("Hashes %s" % title)
+            for original, hash_state in d.items():
+                print(
+                    "%s: %s (%s) " % (
+                        original,
+                        hash_state["value"],
+                        hash_state["type"]
+                    )
+                )
+
     elif googlesearch:
         links = google_hash(hashvalue)
         print("Google:")
